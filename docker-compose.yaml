@@ -1,0 +1,111 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres
+    environment:
+      POSTGRES_DB: quizdb
+      POSTGRES_USER: quizuser
+      POSTGRES_PASSWORD: quizpass
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db-init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U quizuser -d quizdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  service-registory:
+    build: ./service-registory
+    container_name: service-registory
+    ports:
+      - "8761:8761"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8761/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  auth-service:
+    build: ./auth-service
+    container_name: auth-service
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/quizdb
+      SPRING_DATASOURCE_USERNAME: quizuser
+      SPRING_DATASOURCE_PASSWORD: quizpass
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://service-registory:8761/eureka
+    depends_on:
+      postgres:
+        condition: service_healthy
+      service-registory:
+        condition: service_healthy
+
+  question-service:
+    build: ./question-service
+    container_name: question-service
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/quizdb
+      SPRING_DATASOURCE_USERNAME: quizuser
+      SPRING_DATASOURCE_PASSWORD: quizpass
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://service-registory:8761/eureka
+    depends_on:
+      postgres:
+        condition: service_healthy
+      service-registory:
+        condition: service_healthy
+
+  quiz-service:
+    build: ./quiz-service
+    container_name: quiz-service
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/quizdb
+      SPRING_DATASOURCE_USERNAME: quizuser
+      SPRING_DATASOURCE_PASSWORD: quizpass
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://service-registory:8761/eureka
+    depends_on:
+      postgres:
+        condition: service_healthy
+      service-registory:
+        condition: service_healthy
+
+  api-gateway:
+    build: ./api-gateway
+    container_name: api-gateway
+    ports:
+      - "8765:8765"
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://service-registory:8761/eureka
+    depends_on:
+      service-registory:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+      question-service:
+        condition: service_started
+      quiz-service:
+        condition: service_started
+
+  frontend:
+    build:
+      context: ./quiz-frontend
+      args:
+        VITE_API_URL: http://localhost:8765
+    container_name: frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - api-gateway
+
+volumes:
+  pgdata: 

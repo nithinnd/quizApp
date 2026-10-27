@@ -1,0 +1,34 @@
+# Build output
+target/
+*.class
+*.jar
+dist/
+build/
+
+# Dependencies (note: there's a stray one at the repo root)
+node_modules/
+
+# Logs (your two runtime logs are ~2.5 MB each)
+*.log
+logs/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/
+
+# Env files and local secrets
+.env
+.env.*
+!.env.example
+application-local.properties
+application-local.yml
+*.pem
+*.key
+
+# OS
+.DS_Store
+Thumbs.db

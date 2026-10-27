@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: service-registory
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: service-registory
+  template:
+    metadata:
+      labels:
+        app: service-registory
+    spec:
+      containers:
+        - name: service-registory
+          image: quizapp/service-registory:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8761
+          readinessProbe:
+            tcpSocket:
+              port: 8761
+            initialDelaySeconds: 15
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: 8761
+            initialDelaySeconds: 30
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: service-registory
+spec:
+  selector:
+    app: service-registory
+  ports:
+    - port: 8761
+      targetPort: 8761
