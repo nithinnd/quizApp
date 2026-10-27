@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-services:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - service-registory
+          - auth-Service
+          - question-service
+          - quiz-service
+          - Api-Gateway
+          - quiz-frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: |
+          NAME=$(echo "${{ matrix.service }}" | tr '[:upper:]' '[:lower:]')
+          docker build -t quizapp/$NAME:${{ github.sha }} ./${{ matrix.service }}
